@@ -245,6 +245,9 @@ def R(state):
 # Action function
 # function A -> inputs: s -> current state
 #               returns: a -> all possible actions from the current state
+
+# since this function is the same for both value and policy iteration 
+# this means that policies for bot method will be the same        
 def A(state):
     if state in goal_state_new:
         # only exit action possible
@@ -264,6 +267,10 @@ def A(state):
         right = str((m, n + 1))
         left = str((m, n - 1))
 
+        # order up, right, down, left
+        # for a given state if values for more than one action is the same
+        # this order preserved. For the sample inputs/outputs, though values do not change,
+        # the policies may differ. 
         if up in states:
             actions.append('up')
         if right in states:
@@ -276,6 +283,7 @@ def A(state):
         return actions
 
 
+# round(float, 2) 2 digits after the dot
 def roundValues(u):
     result = {}
     for s in states:
@@ -290,6 +298,7 @@ def roundValues(u):
     return result
 
 
+# find the given state's value
 def expected_utility(a, s, U):
     return sum(p * U[s1] for (p, s1) in T(s, a))
 
