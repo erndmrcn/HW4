@@ -8,25 +8,30 @@ import copy
 # global variables and structures
 # height and width of the grid world
 M, N = 0, 0
+
 # survival reward
 reward = 0.0
+
 # list contains all obstacles' positions
 obstacle_states = []
+
 # list contains all goal states' positions
 goal_state = []
+
 # discount variable
 gamma = 0.0
 epsilon = 0.0
-# total numbe rof iteration 
+
+# total number of iteration 
 iteration = 0
 
-first = False
 # grid is a dictionary
 # terminal states initialized with their values
 # obstacle states are indicated by 'obstacle'
 grid = dict()
 
 # utility functions
+
 # read into global variables and structures
 def readFile(file_name):
     global M, N, reward, action_noise, epsilon, gamma, iteration, obstacle_states, goal_state
@@ -69,101 +74,164 @@ def readFile(file_name):
         iteration = int(lines[17])
     return
 
+
+# going up helper
 def go_up(first_dim, second_dim):
     up = str((first_dim - 1, second_dim))
-    if up not in obstacle_states_new and up in list(grid.keys()):
+    # if up state is a valid state (non-obstacle and inside grid), add the action
+    if up not in obstacle_states_new and up in states:
         return up
     else:
         return str((first_dim, second_dim))
 
+
+# going down helper
 def go_down(first_dim, second_dim):
     down = str((first_dim + 1, second_dim))
-    if down not in obstacle_states_new and down in list(grid.keys()):
+    # if down state is a valid state (non-obstacle and inside grid), add the action
+    if down not in obstacle_states_new and down in states:
         return down
     else:
         return str((first_dim, second_dim))
-    # if first_dim >= M - 1:
-    #     return str((first_dim, second_dim))
-    # else:
-    #     return str((first_dim + 1, second_dim))
 
+
+# going left helper
 def go_left(first_dim, second_dim):
     left = str((first_dim, second_dim - 1))
-    if left not in obstacle_states_new and left in list(grid.keys()):
+    # if left state is a valid state (non-obstacle and inside grid), add the action
+    if left not in obstacle_states_new and left in states:
         return left
     else:
         return str((first_dim, second_dim))
-    # if second_dim <= 0:
-    #     return str((first_dim, second_dim))
-    # else:
-    #     return str((first_dim, second_dim - 1))
 
+
+# going right helper
 def go_right(first_dim, second_dim):
     right = str((first_dim, second_dim + 1))
-    if right not in obstacle_states_new and right in list(grid.keys()):
+    # if right state is a valid state (non-obstacle and inside grid), add the action
+    if right not in obstacle_states_new and right in states:
         return right
     else:
         return str((first_dim, second_dim))
-    # if second_dim >= N - 1:
-    #     return str((first_dim, second_dim))
-    # else:
-    #     return str((first_dim, second_dim + 1))
+
 
 # from given state take given action and return the resultant state's reward
 def go(state, action):
-    global first
     # 0.8 probability take selected action, up    , down , left, right
     # 0.1 counter clockwise 90 degree,      left  , right, down, up
     # 0.1 clockwise 90 degree,              right , left , up  , down
 
     # state -> (a, b)
-    first_dim = int(state[1:2])  # -> firstDim
-    second_dim = int(state[4:5])  # -> secondDim
-    curr = (first_dim, second_dim)
+    temp = state.split(',')
+    first_dim = int(temp[0][1:])  # -> firstDim
+    second_dim = int(temp[1][:-1])  # -> secondDim
 
     if action == 'up':
-        new_state_1 = go_up(first_dim, second_dim)
-        new_state_2 = go_left(first_dim, second_dim)
-        new_state_3 = go_right(first_dim, second_dim)
+        new_state_1 = go_up(first_dim, second_dim)      # selected action
+        new_state_2 = go_left(first_dim, second_dim)    # counter-cw action
+        new_state_3 = go_right(first_dim, second_dim)   # clockwise action
     elif action == 'down':
-        new_state_1 = go_down(first_dim, second_dim)
-        new_state_2 = go_right(first_dim, second_dim)
-        new_state_3 = go_left(first_dim, second_dim)
+        new_state_1 = go_down(first_dim, second_dim)    # selected action
+        new_state_2 = go_right(first_dim, second_dim)   # counter-cw action
+        new_state_3 = go_left(first_dim, second_dim)    # clockwise action
     elif action == 'left':
-        new_state_1 = go_left(first_dim, second_dim)
-        new_state_2 = go_down(first_dim, second_dim)
-        new_state_3 = go_up(first_dim, second_dim)
+        new_state_1 = go_left(first_dim, second_dim)    # selected action
+        new_state_2 = go_down(first_dim, second_dim)    # counter-cw action
+        new_state_3 = go_up(first_dim, second_dim)      # clockwise action
     elif action == 'right':
-        new_state_1 = go_right(first_dim, second_dim)
-        new_state_2 = go_up(first_dim, second_dim)
-        new_state_3 = go_down(first_dim, second_dim)
-    elif action == 'exit':
-        # terminal states
-        if not first:
-            first = True
-            return [(float(grid[state]), state)]
-        return [(0.0, state)]
-    elif action == 'Obstacle':
-        return [(0.0, state)]
+        new_state_1 = go_right(first_dim, second_dim)   # selected action
+        new_state_2 = go_up(first_dim, second_dim)      # counter-cw action
+        new_state_3 = go_down(first_dim, second_dim)    # clockwise action
+    # for exit, obstacle and other type of attacks
     else:
         # obstacle state
         # do nothing
-        print('Wrong action is taken. Returning empty list.')
-        return [(0.0, state)]
+        return [(float(0), state)]
 
     if len(action_noise) > 1:
         return [(action_noise[0], new_state_1), (action_noise[1], new_state_2), (action_noise[2], new_state_3)]
     elif len(action_noise) == 1:
         return [(action_noise[0], new_state_1)]
     else:
-        print('action noise problem. Returning \'None\'.')
-        return []
+        exit('incorrect action noise')
 
+
+# clear all global variables
+def clear():
+    M, N = 0, 0
+    reward = 0.0
+    obstacle_states = []
+    obstacle_states_new = []
+    goal_state = []
+    goal_state_new = []
+    gamma = 0.0
+    epsilon = 0.0
+    iteration = 0
+    grid = dict()
+    return
+
+
+# update grid values
+# update obstacle and goal state values
+def update_grid():
+    global obstacle_states_new, goal_state_new, states
+    
+    # update grid variable
+    for i in range(M):
+        for j in range(N):
+            grid[str((i,j))] = float(reward)
+    
+    # update goal states
+    goal_state_new = []
+    for state in goal_state:
+        s = state.split(':')
+        s[0] = s[0].replace(',', ', ')
+        goal_state_new.append(s[0])
+        grid[s[0]] = float(s[1])
+
+    # update obstacle states
+    obstacle_states_new = []
+    for state in obstacle_states:
+        state = state.replace(',', ', ')
+        obstacle_states_new.append(state)
+        grid[state] = 'Obstacle'
+    
+    states = list(grid.keys())
+    
+    return
+
+
+# change actions from strings to symbols
+def symbol(pi):
+    temp_dict = {}
+    for s in states:
+        l = s.split(',')
+        
+        f = int(l[0][1:])
+        ss = int(l[1][:-1])
+        if pi[s] == 'up':
+            temp_dict.update({(f, ss): '^'})
+        elif pi[s] == 'down':
+            temp_dict.update({(f, ss): 'V'})
+        elif pi[s] == 'right':
+            temp_dict.update({(f, ss): '>'})
+        elif pi[s] == 'left':
+            temp_dict.update({(f, ss): '<'})
+        else:
+            continue
+
+    temp_dict = dict(sorted(temp_dict.items()))
+    return temp_dict
+
+
+# transition function
 # function T -> inputs: s, a -> current state and action taken
 #               returns: p, s1 -> probability of state gone to and the state gone to
 def T(state, action):
     return go(state, action) 
 
+
+# reward function
 # function R -> inputs: s -> current state
 #               returns: reward for that state, -0.04 for non terminal states
 def R(state):
@@ -173,19 +241,22 @@ def R(state):
     else:
         return float(rew)
 
+
+# Action function
 # function A -> inputs: s -> current state
 #               returns: a -> all possible actions from the current state
 def A(state):
     if state in goal_state_new:
         # only exit action possible
         return ['exit']
-    elif state in obstacle_states_new:
+    if state in obstacle_states_new:
         # cannot enter this state but check anyway
         # no possible actions from this state
         return ['Obstacle']
     else:
-        m = int(state[1:2])
-        n = int(state[4:5])
+        l = state.split(',')
+        m = int(l[0][1:])
+        n = int(l[1][:-1])
         actions = []
 
         up = str((m - 1, n))
@@ -193,91 +264,81 @@ def A(state):
         right = str((m, n + 1))
         left = str((m, n - 1))
 
-        states = list(grid.keys())
-
-        if up in states and up not in obstacle_states_new:
+        if up in states:
             actions.append('up')
-        if down in states and down not in obstacle_states_new:
-            actions.append('down')
-        if left in states and left not in obstacle_states_new:
-            actions.append('left')
-        if right in states and right not in obstacle_states_new:
+        if right in states:
             actions.append('right') 
+        if down in states:
+            actions.append('down')
+        if left in states:
+            actions.append('left')
 
-        print(actions)
         return actions
+
+
+def roundValues(u):
+    result = {}
+    for s in states:
+        l = s.split(',')
+
+        f = int(l[0][1:])
+        ss = int(l[1][:-1])
+        u[s] = round(u[s], 2)
+        result.update({(f, ss): u[s]})
+
+    result = dict(sorted(result.items()))
+    return result
+
 
 def expected_utility(a, s, U):
     return sum(p * U[s1] for (p, s1) in T(s, a))
 
+
 def policy_evaluation(pi, U, k):
     for i in range(k):
-        for s in list(grid.keys()):
-            U[s] = R(s) + gamma * sum(p * U[s1] for (p, s1) in T(s, pi[s]))
-        
+        for s in states:
+            U[s] = R(s) + gamma * sum(p * U[s1] for (p, s1) in T(s, pi[s]))     
     return U
+
+
+# given the U, find the optimal policy
+def best_policy(U):
+    pi = {}
+    for s in states:
+        pi[s] = max(A(s), key=lambda a: expected_utility(a, s, U))
+    return pi
+
 
 # implement value iteration algorithm
 def valueIteration():
-    global obstacle_states_new, goal_state_new, grid
-    
-    for i in range(M):
-        for j in range(N):
-            grid[str((i,j))] = float(reward)
-    
-    goal_state_new = []
-    for state in goal_state:
-        s = state.split(':')
-        s[0] = s[0].replace(',', ', ')
-        goal_state_new.append(s[0])
-        grid[s[0]] = float(s[1])
+    update_grid()
 
-    obstacle_states_new = []
-    for state in obstacle_states:
-        state = state.replace(',', ', ')
-        obstacle_states_new.append(state)
-        grid[state] = 'Obstacle'
+    # initialize to 0
+    U1 = {s: 0 for s in states}
 
-    U1 = {s: 0 for s in list(grid.keys())}
-
+    # main loop
     while True:
         U = U1.copy()
         delta = 0
-        for s in list(grid.keys()):
+        for s in states:
             U1[s] = R(s) + gamma * max(sum(p * U[s1] for (p, s1) in T(s, a)) 
                                                 for a in A(s))
 
             delta = max(delta, abs(U1[s] - U[s]))
+        
         if delta <= epsilon * (1 - gamma) / gamma:
-            return U
+            return U, best_policy(U)
 
-    # then extract policies
-    
     return
 
+
 def policyIteration():
-    global goal_state_new, obstacle_states_new
-
-    for i in range(M):
-        for j in range(N):
-            grid[str((i,j))] = float(reward)
-    
-    goal_state_new = []
-    for state in goal_state:
-        s = state.split(':')
-        s[0] = s[0].replace(',', ', ')
-        goal_state_new.append(s[0])
-        grid[s[0]] = float(s[1])
-
-    obstacle_states_new = []
-    for state in obstacle_states:
-        state = state.replace(',', ', ')
-        obstacle_states_new.append(state)
-        grid[state] = 'Obstacle'
-
+    update_grid()
+    # initialze to zero
     U = {s: 0 for s in grid.keys()}
 
-    l = list(grid.keys())
+    # random-like policy initialization
+    l = states
     pi = {}
     for i in range(len(l)):
         s = l[i]
@@ -285,8 +346,6 @@ def policyIteration():
         remainder = i % len(actions)
         pi.update({s: actions[remainder]})
 
-    print(pi)
-    
     while True:
         U = policy_evaluation(pi, U, 30)
         unchanged = True
@@ -298,19 +357,25 @@ def policyIteration():
         if unchanged:
             return pi, U
 
+
+# function to be called
 def SolveMDP(method_name, problem_file_name):
-    # move(state) # if |action noise| > 1 then random else determinant
-    # how to randomize???
-    #
-    # reward(state)
     readFile(problem_file_name)
 
+    # call value iteration method
     if method_name == 'ValueIteration':
-        # call value iteration method
-        return valueIteration()
+        result = valueIteration()
 
+        # clear all globals
+        clear()
+        return roundValues(result[0]), symbol(result[1])
+
+    # call policy iteration method
     elif method_name == 'PolicyIteration':
-        # call policy iteration method
-        return policyIteration()
+        result = policyIteration()
+        # clear all globals
+        clear()
+        return roundValues(result[1]), symbol(result[0])
 
-print(SolveMDP('ValueIteration', 'mdp1.txt'))
+
+# print(SolveMDP('PolicyIteration', 'mdp1.txt'))
